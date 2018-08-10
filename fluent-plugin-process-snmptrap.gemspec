@@ -8,6 +8,7 @@ Gem::Specification.new do |spec|
   spec.email   = ["ajay.rameshcs@gmail.com"]
 
   spec.description   = "A filter plugin which appends various fields to SNMP Traps received from HPE Servers"
+  spec.summary       = spec.description
   spec.name   	     = "fluent-plugin-process-snmptrap"  
   spec.homepage      = "https://github.com/Azure/fluent-plugin-process-snmptrap"
   spec.license       = "MIT"
