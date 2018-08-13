@@ -14,7 +14,7 @@ module Fluent
     @@chassisBMCId = "SNMPv2-SMI::enterprises.59.3.800.10.30.1.1"
     @@type = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"
     @@status = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.4"
-    @@device = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.2"
+    @@sensorValue = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.2"
     @@host = "host"
     @@serverPowerUp = "Server Power ON"
     @@serverPowerDown = "Server Power OFF"
@@ -28,18 +28,14 @@ module Fluent
     end
 
     def filter(tag, time, record)
-      message = record.to_s
-      message = message.delete('\\"')
-      snmp_msg = message.gsub(/(?:(SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}(=>))|(host=>))/, "")
       record["machineId"] = ""
       record["rmc_host"] = ""
       record["event"] = ""
       record["status"] = ""
       record["type"] = ""
       record["severity"] = ""
-      record["device"] = ""
+      record["sensorValue"] = ""
       record["error"] = ""
-      record["message"] = ""
 
 
       determineMachineId(record)
@@ -47,7 +43,6 @@ module Fluent
       processEvent(record)
       determineDevice(record)
       record["status"] = determineStatus(record)
-      record["message"] = snmp_msg
       record.delete_if { |key, value| key.to_s.match(/(?:SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}|(host))/)}
       return record
 
@@ -81,7 +76,7 @@ module Fluent
     end
 
     def determineDevice(record)
-      record["device"] = record[@@device]
+      record["sensorValue"] = record[@@sensorValue]
     end
 
     def determineStatus(record)
