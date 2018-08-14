@@ -5,9 +5,7 @@ module Fluent
     Fluent::Plugin.register_filter('process_snmptrap', self)
 
     # config_param
-    config_param :HPEHostName, :string
     config_param :coloregion, :string
-    config_param :domain, :string
 
     @@snmptrapOid = "SNMPv2-MIB::snmpTrapOID.0"
     @@rmcSerialNum = "SNMPv2-SMI::enterprises.59.3.800.10.10.1.1"
@@ -40,7 +38,7 @@ module Fluent
       record["device"] = ""
       record["error"] = ""
       record["message"] = ""
-
+      record["timestamp"] = ""
 
       determineMachineId(record)
       getrmchost(record)
@@ -48,6 +46,7 @@ module Fluent
       determineDevice(record)
       record["status"] = determineStatus(record)
       record["message"] = snmp_msg
+      record["timestamp"] = time
       record.delete_if { |key, value| key.to_s.match(/(?:SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}|(host))/)}
       return record
 
