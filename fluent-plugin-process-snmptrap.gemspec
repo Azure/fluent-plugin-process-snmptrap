@@ -4,8 +4,8 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 Gem::Specification.new do |spec|
   spec.name    = "fluent-plugin-process-snmptrap"
   spec.version = "0.1.0"
-  spec.authors = ["aj-rame3"]
-  spec.email   = ["ajay.rameshcs@gmail.com"]
+  spec.authors = ["aj-rame3", "Gabe de la Mora"]
+  spec.email   = ["ajay.rameshcs@gmail.com", "gadelamo@microsoft.com"]
 
   spec.description   = "A filter plugin which appends various fields to SNMP Traps received from HPE Servers"
   spec.summary       = spec.description

@@ -7,12 +7,13 @@ module Fluent
     # config_param
     config_param :coloregion, :string
 
+    #object identifiers outlined in /usr/share/snmp/mibs/sgi-uv300-smi.mib
     @@snmptrapOid = "SNMPv2-MIB::snmpTrapOID.0"
     @@rmcSerialNum = "SNMPv2-SMI::enterprises.59.3.800.10.10.1.1"
     @@chassisBMCId = "SNMPv2-SMI::enterprises.59.3.800.10.30.1.1"
-    @@type = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"
+    @@device = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"
     @@status = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.4"
-    @@device = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.2"
+    @@sensorValue = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.2"
     @@host = "host"
     @@serverPowerUp = "Server Power ON"
     @@serverPowerDown = "Server Power OFF"
@@ -33,9 +34,9 @@ module Fluent
       record["rmc_host"] = ""
       record["event"] = ""
       record["status"] = ""
-      record["type"] = ""
-      record["severity"] = ""
       record["device"] = ""
+      record["severity"] = ""
+      record["sensorValue"] = ""
       record["error"] = ""
       record["message"] = ""
       record["timestamp"] = ""
@@ -43,9 +44,9 @@ module Fluent
       determineMachineId(record)
       getrmchost(record)
       processEvent(record)
-      determineDevice(record)
+      determineSensorValue(record)
       record["status"] = determineStatus(record)
-      record["message"] = snmp_msg
+      #record["message"] = snmp_msg
       record["timestamp"] = time
       record.delete_if { |key, value| key.to_s.match(/(?:SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}|(host))/)}
       return record
@@ -67,7 +68,8 @@ module Fluent
       event = determineEvent(record)
       if !event.nil?
         record["event"] = event
-      else record["error"] = "Cannot determine the event"
+      else 
+        record["error"] = "Cannot determine the event"
       end
     end
 
@@ -79,10 +81,12 @@ module Fluent
       record["rmc_host"] = rmc_host
     end
 
-    def determineDevice(record)
-      record["device"] = record[@@device]
+    def determineSensorValue(record)
+      record["sensorValue"] = record[@@sensorValue]
     end
 
+    #mib labels for object identifiers outlined in /usr/share/snmp/mibs/sgi-uv300-smi.mib
+    #possible values for chassisSensorTraps
     def determineStatus(record)
       status_array = ["unavailable", "ok", "LowerNonrecoverable", "LowerCritical", "LowerNonCritical","UpperNonCritical", "UpperCritical",
                       "UpperNonRecoverable", "notPresent", "failed", "redundant", "degraded", "nonRedundant", "lost", "enabled", "disabled",
@@ -94,10 +98,10 @@ module Fluent
 
 
     def determineEvent(record)
-      type = record[@@type]
-      record["type"] = type
+      device = record[@@device]
+      record["device"] = device
       record["status"] =
-      case type
+      case device
         when "SYSPOWERSTATE"
           if record[@@status].to_s == "18"
             event = @@serverPowerUp
