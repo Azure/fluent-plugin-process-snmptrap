@@ -11,7 +11,7 @@ module Fluent
     @@snmptrapOid = "SNMPv2-MIB::snmpTrapOID.0"
     @@rmcSerialNum = "SNMPv2-SMI::enterprises.59.3.800.10.10.1.1"
     @@chassisBMCId = "SNMPv2-SMI::enterprises.59.3.800.10.30.1.1"
-    @@device = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"
+    @@sensor = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"
     @@status = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.4"
     @@sensorValue = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.2"
     @@host = "host"
@@ -34,7 +34,7 @@ module Fluent
       record["rmc_host"] = ""
       record["event"] = ""
       record["status"] = ""
-      record["device"] = ""
+      record["sensor"] = ""
       record["severity"] = ""
       record["sensorValue"] = ""
       record["error"] = ""
@@ -45,8 +45,8 @@ module Fluent
       getrmchost(record)
       processEvent(record)
       determineSensorValue(record)
-      record["status"] = determineStatus(record)
-      #record["message"] = snmp_msg
+      determineStatus(record)
+      record["message"] = snmp_msg
       record["timestamp"] = time
       record.delete_if { |key, value| key.to_s.match(/(?:SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}|(host))/)}
       return record
@@ -62,13 +62,10 @@ module Fluent
       record["machineId"] = "HPE:#{coloregion}:#{rmcSerialNo}"
     end
 
-
     def processEvent(record)
       record["severity"] = "info"
-      event = determineEvent(record)
-      if !event.nil?
-        record["event"] = event
-      else 
+      determineEvent(record)
+      if record["event"].nil?
         record["error"] = "Cannot determine the event"
       end
     end
@@ -93,27 +90,24 @@ module Fluent
                       "deviceAbsent", "devicePresent", "on", "off", "asserted", "deasserted", "limitNotExceeded", "limitExceeded"]
       get_status = record[@@status].to_i
       status = status_array[get_status]
-      return status
+      record["status"] = status
     end
 
-
     def determineEvent(record)
-      device = record[@@device]
-      record["device"] = device
-      record["status"] =
-      case device
-        when "SYSPOWERSTATE"
-          if record[@@status].to_s == "18"
-            event = @@serverPowerUp
-          elsif record[@@status].to_s == "19"
-            event = @@serverPowerDown
-          else
-            record["error"] = "Unknown Status"
-          end
+      sensor = record[@@sensor]
+      record["sensor"] = sensor
+      if sensor == "SYSPOWERSTATE"
+        if record[@@status].to_s == "18"
+          event = @@serverPowerUp
+        elsif record[@@status].to_s == "19"
+          event = @@serverPowerDown
         else
-          event = "Chassis Sensor Event"
+          record["error"] = "Unknown Status"
         end
-      event
+      else
+        event = "Chassis Sensor Event"
+      end
+      record["event"] = event
     end
   end
 end
