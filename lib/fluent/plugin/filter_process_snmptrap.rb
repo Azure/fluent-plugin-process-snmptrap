@@ -17,6 +17,17 @@ module Fluent
     @@host = "host"
     @@serverPowerUp = "Server Power ON"
     @@serverPowerDown = "Server Power OFF"
+    ChassisSensorEvent = "Chassis Sensor Event"
+    ServerPowerUp = 18
+    ServerPowerDown = 19
+    #mib labels for object identifiers outlined in 
+    #/usr/share/snmp/mibs/sgi-uv300-smi.mib
+    #possible values for chassisSensorTraps
+    Status_array = ["unavailable", "ok", "LowerNonrecoverable", "LowerCritical", "LowerNonCritical","UpperNonCritical", "UpperCritical",
+    "UpperNonRecoverable", "notPresent", "failed", "redundant", "degraded", 
+    "nonRedundant", "lost", "enabled", "disabled",
+    "deviceAbsent", "devicePresent", "on", "off", "asserted", "deasserted", 
+    "limitNotExceeded", "limitExceeded"]
 
     def configure(conf)
       super
@@ -50,13 +61,12 @@ module Fluent
       record["timestamp"] = time
       record.delete_if { |key, value| key.to_s.match(/(?:SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}|(host))/)}
       return record
-
     end
 
     def determineMachineId(record)
       rmcSerialNo = record[@@rmcSerialNum].to_s
       if rmcSerialNo.nil?
-        record["error"] = "Cannot determine Machine ID"
+        record["error"] << " : Can not determine Machine ID"
         return
       end
       record["machineId"] = "HPE:#{coloregion}:#{rmcSerialNo}"
@@ -66,14 +76,14 @@ module Fluent
       record["severity"] = "info"
       determineEvent(record)
       if record["event"].nil?
-        record["error"] = "Cannot determine the event"
+        record["error"] << " : Can not determine the event"
       end
     end
 
     def getrmchost(record)
       rmc_host = record[@@host]
       if rmc_host.nil?
-        record["error"] = "cannot Determine the host IP"
+        record["error"] << " : Can not Determine the host IP"
       end
       record["rmc_host"] = rmc_host
     end
@@ -82,14 +92,9 @@ module Fluent
       record["sensorValue"] = record[@@sensorValue]
     end
 
-    #mib labels for object identifiers outlined in /usr/share/snmp/mibs/sgi-uv300-smi.mib
-    #possible values for chassisSensorTraps
     def determineStatus(record)
-      status_array = ["unavailable", "ok", "LowerNonrecoverable", "LowerCritical", "LowerNonCritical","UpperNonCritical", "UpperCritical",
-                      "UpperNonRecoverable", "notPresent", "failed", "redundant", "degraded", "nonRedundant", "lost", "enabled", "disabled",
-                      "deviceAbsent", "devicePresent", "on", "off", "asserted", "deasserted", "limitNotExceeded", "limitExceeded"]
       get_status = record[@@status].to_i
-      status = status_array[get_status]
+      status = Status_array[get_status]
       record["status"] = status
     end
 
@@ -97,18 +102,17 @@ module Fluent
       sensor = record[@@sensor]
       record["sensor"] = sensor
       if sensor == "SYSPOWERSTATE"
-        if record[@@status].to_s == "18"
+        if record[@@status].to_s == ServerPowerUp
           event = @@serverPowerUp
-        elsif record[@@status].to_s == "19"
+        elsif record[@@status].to_s == ServerPowerDown
           event = @@serverPowerDown
         else
-          record["error"] = "Unknown Status"
+          record["error"] << " : Unknown Status"
         end
       else
-        event = "Chassis Sensor Event"
+        event = ChassisSensorEvent
       end
       record["event"] = event
     end
   end
 end
-
