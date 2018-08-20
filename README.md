@@ -1,4 +1,3 @@
-
 # Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
@@ -12,3 +11,62 @@ provided by the bot. You will only need to do this once across all repos using o
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+# fluent-plugin-process-snmptrap
+
+[Fluentd](https://fluentd.org/) filter plugin to do something.
+
+This is a filter plugin for SNMP V2 traps. The plugin check the SNMP messages and maps the OID and associated values in SNMP Traps. 
+It adds machineID, event, SNMP Trap type, host, status of machine, severity, device and message to events received. It detects the 
+SNMP Traps based on the format <OID>:<Value>
+The OID is of the format /SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}/
+
+Machin ID format 
+HPE:<Coloregion>:<ChassisSerialNo>
+
+Events detected:
+Power ON
+Power OFF
+
+## Installation
+
+### RubyGems
+
+```
+$ gem install fluent-plugin-process-snmptrap
+```
+
+### Bundler
+
+Add following line to your Gemfile:
+
+```ruby
+gem "fluent-plugin-process-snmptrap"
+```
+
+And then execute:
+
+```
+$ bundle
+```
+
+## Configuration
+
+You can generate configuration template:
+
+```
+$ fluent-plugin-config-format filter process_snmptrap
+```
+
+<filter SNMPTrap.Alert>
+   @type process_snmptrap
+   HPEHostName ServerHostName
+   coloregion <colo region>
+   domain <domain>
+</filter>
+
+
+
+## Copyright
+
+* Copyright(c) 2018- aj-rame3/Microsoft
