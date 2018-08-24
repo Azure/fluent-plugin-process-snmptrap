@@ -1,4 +1,5 @@
 require 'fluent/plugin/filter'
+require 'json'
 
 module Fluent
   class ProcessSnmptrap < Filter
@@ -11,7 +12,7 @@ module Fluent
     @@snmptrapOid = "SNMPv2-MIB::snmpTrapOID.0"
     @@rmcSerialNum = "SNMPv2-SMI::enterprises.59.3.800.10.10.1.1"
     @@chassisBMCId = "SNMPv2-SMI::enterprises.59.3.800.10.30.1.1"
-    @@sensor = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"
+    @@device = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"
     @@status = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.4"
     @@sensorValue = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.2"
     @@host = "host"
@@ -38,14 +39,16 @@ module Fluent
     end
 
     def filter(tag, time, record)
+      @time = time
+      @tag = tag
       message = record.to_s
       message = message.delete('\\"')
       snmp_msg = message.gsub(/(?:(SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}(=>))|(host=>))/, "")
       record["machineId"] = ""
-      record["rmc_host"] = ""
+      record["rmcHostIP"] = ""
       record["event"] = ""
       record["status"] = ""
-      record["sensor"] = ""
+      record["device"] = ""
       record["severity"] = ""
       record["sensorValue"] = ""
       record["error"] = ""
@@ -53,14 +56,26 @@ module Fluent
       record["timestamp"] = ""
 
       determineMachineId(record)
-      getrmchost(record)
+      getrmcHost(record)
       processEvent(record)
       determineSensorValue(record)
       determineStatus(record)
-      record["message"] = snmp_msg
+      makeMessage(record)
       record["timestamp"] = time
       record.delete_if { |key, value| key.to_s.match(/(?:SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}|(host))/)}
       return record
+    end
+
+    def makeMessage(record)
+      message = 
+      {
+        :timestamp => @time,
+        :source => "snmp",
+        :host => record[@@host],
+        :device => record[@@device],
+        :status => record[@@status],
+      }
+      record["message"] = message.to_json
     end
 
     def determineMachineId(record)
@@ -80,12 +95,12 @@ module Fluent
       end
     end
 
-    def getrmchost(record)
-      rmc_host = record[@@host]
-      if rmc_host.nil?
+    def getrmcHost(record)
+      host = record[@@host]
+      if host.nil?
         record["error"] << " : Can not Determine the host IP"
       end
-      record["rmc_host"] = rmc_host
+      record["rmcHostIP"] = host
     end
 
     def determineSensorValue(record)
@@ -99,9 +114,9 @@ module Fluent
     end
 
     def determineEvent(record)
-      sensor = record[@@sensor]
-      record["sensor"] = sensor
-      if sensor == "SYSPOWERSTATE"
+      device = record[@@device]
+      record["device"] = device
+      if device == "SYSPOWERSTATE"
         if record[@@status].to_s == ServerPowerUp
           event = @@serverPowerUp
         elsif record[@@status].to_s == ServerPowerDown
