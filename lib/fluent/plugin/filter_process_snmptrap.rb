@@ -53,7 +53,7 @@ module Fluent
       record["sensorValue"] = ""
       record["error"] = ""
       record["message"] = ""
-      record["timestamp"] = ""
+      record["time"] = ""
 
       determineMachineId(record)
       getrmcHost(record)
@@ -61,7 +61,7 @@ module Fluent
       determineSensorValue(record)
       determineStatus(record)
       makeMessage(record)
-      record["timestamp"] = time
+      record["time"] = time
       record.delete_if { |key, value| key.to_s.match(/(?:SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}|(host))/)}
       return record
     end
@@ -69,7 +69,6 @@ module Fluent
     def makeMessage(record)
       message = 
       {
-        :timestamp => @time,
         :source => "snmp",
         :host => record[@@host],
         :device => record[@@device],
