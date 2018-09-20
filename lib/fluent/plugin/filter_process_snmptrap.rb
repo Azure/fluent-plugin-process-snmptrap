@@ -24,11 +24,31 @@ module Fluent
     #mib labels for object identifiers outlined in 
     #/usr/share/snmp/mibs/sgi-uv300-smi.mib
     #possible values for chassisSensorTraps
-    Status_array = ["unavailable", "ok", "LowerNonrecoverable", "LowerCritical", "LowerNonCritical","UpperNonCritical", "UpperCritical",
-    "UpperNonRecoverable", "notPresent", "failed", "redundant", "degraded", 
-    "nonRedundant", "lost", "enabled", "disabled",
-    "deviceAbsent", "devicePresent", "on", "off", "asserted", "deasserted", 
-    "limitNotExceeded", "limitExceeded"]
+    Status_array = [
+        "unavailable",
+        "ok",
+        "LowerNonrecoverable",
+        "LowerCritical",
+        "LowerNonCritical",
+        "UpperNonCritical",
+        "uppercritical",
+        "UpperNonRecoverable",
+        "notPresent",
+        "failed",
+        "redundant",
+        "degraded",
+        "nonRedundant",
+        "lost",
+        "enabled",
+        "disabled",
+        "deviceAbsent",
+        "devicePresent",
+        "on",
+        "off",
+        "asserted",
+        "deasserted",
+        "limitNotExceeded",
+        "limitExceeded"]
 
     def configure(conf)
       super
@@ -41,11 +61,8 @@ module Fluent
     def filter(tag, time, record)
       @time = time
       @tag = tag
-      message = record.to_s
-      message = message.delete('\\"')
-      snmp_msg = message.gsub(/(?:(SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}(=>))|(host=>))/, "")
+      message = record.clone
       record["machineId"] = ""
-      record["rmcHostIP"] = ""
       record["event"] = ""
       record["status"] = ""
       record["device"] = ""
@@ -53,28 +70,14 @@ module Fluent
       record["sensorValue"] = ""
       record["error"] = ""
       record["message"] = ""
-      record["time"] = ""
 
       determineMachineId(record)
-      getrmcHost(record)
       processEvent(record)
       determineSensorValue(record)
       determineStatus(record)
-      makeMessage(record)
-      record["time"] = time
+      record["message"] = message
       record.delete_if { |key, value| key.to_s.match(/(?:SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}|(host))/)}
       return record
-    end
-
-    def makeMessage(record)
-      message = 
-      {
-        :source => "snmp",
-        :host => record[@@host],
-        :device => record[@@device],
-        :status => record[@@status],
-      }
-      record["message"] = message.to_json
     end
 
     def determineMachineId(record)
@@ -94,14 +97,6 @@ module Fluent
       end
     end
 
-    def getrmcHost(record)
-      host = record[@@host]
-      if host.nil?
-        record["error"] << " : Can not Determine the host IP"
-      end
-      record["rmcHostIP"] = host
-    end
-
     def determineSensorValue(record)
       record["sensorValue"] = record[@@sensorValue]
     end
@@ -116,9 +111,9 @@ module Fluent
       device = record[@@device]
       record["device"] = device
       if device == "SYSPOWERSTATE"
-        if record[@@status].to_s == ServerPowerUp
+        if record[@@status].to_i == ServerPowerUp
           event = @@serverPowerUp
-        elsif record[@@status].to_s == ServerPowerDown
+        elsif record[@@status].to_i == ServerPowerDown
           event = @@serverPowerDown
         else
           record["error"] << " : Unknown Status"
