@@ -1,4 +1,5 @@
 require 'fluent/plugin/filter'
+require 'json'
 
 module Fluent
   class ProcessSnmptrap < Filter
@@ -11,7 +12,7 @@ module Fluent
     @@snmptrapOid = "SNMPv2-MIB::snmpTrapOID.0"
     @@rmcSerialNum = "SNMPv2-SMI::enterprises.59.3.800.10.10.1.1"
     @@chassisBMCId = "SNMPv2-SMI::enterprises.59.3.800.10.30.1.1"
-    @@sensor = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"
+    @@device = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"
     @@status = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.4"
     @@sensorValue = "SNMPv2-SMI::enterprises.59.3.800.30.10.1.2"
     @@host = "host"
@@ -23,11 +24,31 @@ module Fluent
     #mib labels for object identifiers outlined in 
     #/usr/share/snmp/mibs/sgi-uv300-smi.mib
     #possible values for chassisSensorTraps
-    Status_array = ["unavailable", "ok", "LowerNonrecoverable", "LowerCritical", "LowerNonCritical","UpperNonCritical", "UpperCritical",
-    "UpperNonRecoverable", "notPresent", "failed", "redundant", "degraded", 
-    "nonRedundant", "lost", "enabled", "disabled",
-    "deviceAbsent", "devicePresent", "on", "off", "asserted", "deasserted", 
-    "limitNotExceeded", "limitExceeded"]
+    Status_array = [
+        "unavailable",
+        "ok",
+        "LowerNonrecoverable",
+        "LowerCritical",
+        "LowerNonCritical",
+        "UpperNonCritical",
+        "uppercritical",
+        "UpperNonRecoverable",
+        "notPresent",
+        "failed",
+        "redundant",
+        "degraded",
+        "nonRedundant",
+        "lost",
+        "enabled",
+        "disabled",
+        "deviceAbsent",
+        "devicePresent",
+        "on",
+        "off",
+        "asserted",
+        "deasserted",
+        "limitNotExceeded",
+        "limitExceeded"]
 
     def configure(conf)
       super
@@ -38,27 +59,23 @@ module Fluent
     end
 
     def filter(tag, time, record)
-      message = record.to_s
-      message = message.delete('\\"')
-      snmp_msg = message.gsub(/(?:(SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}(=>))|(host=>))/, "")
+      @time = time
+      @tag = tag
+      message = record.clone
       record["machineId"] = ""
-      record["rmc_host"] = ""
       record["event"] = ""
       record["status"] = ""
-      record["sensor"] = ""
+      record["device"] = ""
       record["severity"] = ""
       record["sensorValue"] = ""
       record["error"] = ""
       record["message"] = ""
-      record["timestamp"] = ""
 
       determineMachineId(record)
-      getrmchost(record)
       processEvent(record)
       determineSensorValue(record)
       determineStatus(record)
-      record["message"] = snmp_msg
-      record["timestamp"] = time
+      record["message"] = message
       record.delete_if { |key, value| key.to_s.match(/(?:SNMPv2-(\w+)(::)(\w+)((\.)(\d+)){1,13}|(host))/)}
       return record
     end
@@ -80,14 +97,6 @@ module Fluent
       end
     end
 
-    def getrmchost(record)
-      rmc_host = record[@@host]
-      if rmc_host.nil?
-        record["error"] << " : Can not Determine the host IP"
-      end
-      record["rmc_host"] = rmc_host
-    end
-
     def determineSensorValue(record)
       record["sensorValue"] = record[@@sensorValue]
     end
@@ -99,12 +108,11 @@ module Fluent
     end
 
     def determineEvent(record)
-      sensor = record[@@sensor]
-      record["sensor"] = sensor
-      if sensor == "SYSPOWERSTATE"
-        if record[@@status].to_s == ServerPowerUp
+      record["device"] = record[@@device]
+      if record[@@device] == "SYSPOWERSTATE"
+        if record[@@status].to_i == ServerPowerUp
           event = @@serverPowerUp
-        elsif record[@@status].to_s == ServerPowerDown
+        elsif record[@@status].to_i == ServerPowerDown
           event = @@serverPowerDown
         else
           record["error"] << " : Unknown Status"
