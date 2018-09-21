@@ -108,9 +108,8 @@ module Fluent
     end
 
     def determineEvent(record)
-      device = record[@@device]
-      record["device"] = device
-      if device == "SYSPOWERSTATE"
+      record["device"] = record[@@device]
+      if record[@@device] == "SYSPOWERSTATE"
         if record[@@status].to_i == ServerPowerUp
           event = @@serverPowerUp
         elsif record[@@status].to_i == ServerPowerDown
