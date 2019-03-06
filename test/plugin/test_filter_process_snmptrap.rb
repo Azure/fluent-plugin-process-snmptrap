@@ -13,6 +13,7 @@ class ProcessSnmptrapFilterTest < Test::Unit::TestCase
   CONFIG = %[
     @type process_snmptrap
     coloregion testcolo
+    invalidChars {".":"_", "-":"_", "::":"_"}
   ]
 
 
@@ -39,73 +40,24 @@ class ProcessSnmptrapFilterTest < Test::Unit::TestCase
   def test_snmptrap_filter
     records = [
         {
-            "SNMPv2-MIB::sysUpTime.0"=>"43 days, 21:28:56.10",
-            "SNMPv2-MIB::snmpTrapOID.0"=>"SNMPv2-SMI::enterprises.59.3.800.100.20.3",
-            "SNMPv2-SMI::enterprises.59.3.800.10.10.1.1"=>"UV300-00000550",
-            "SNMPv2-SMI::enterprises.59.3.800.10.30.1.1"=>"r001i01b",
-            "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"=>"SYSPOWERSTATE",
-            "SNMPv2-SMI::enterprises.59.3.800.30.10.1.2"=>"0x0",
-            "SNMPv2-SMI::enterprises.59.3.800.30.10.1.4"=>"18",
-            "host"=>"192.168.254.61"
+            "SNMPv2-MIB::sysUpTime.0"=>"179 days,13:26:54.66",
+            "SNMPv2-MIB::snmpTrapOID.0"=>"SGI-UV300::chassisSensor",
+            "SGI-UV300::ssnName"=>"UV300-00000547",
+            "SGI-UV300::chassisName"=>"r001i24b",
+            "SGI-UV300::chassisSensorName"=>"PSU2_COMP_TEMP1",
+            "SGI-UV300::chassisSensorValue"=>"10.3289",
+            "SGI-UV300::chassisSensorStatus"=>"1",
+            "host"=>"172.17.0.2"
         }
     ]
     filtered_records = filter(records)
-    assert_equal records[0]['message'], filtered_records[0]['message']
-    assert_equal 'HPE:testcolo:UV300-00000550', filtered_records[0]['machineId']
-    assert_equal 'SYSPOWERSTATE', filtered_records[0]['device']
-    assert_equal 'Server Power ON', filtered_records[0]['event']
-    assert_equal 'on', filtered_records[0]['status']
-    assert_equal 'info', filtered_records[0]['severity']
-    assert_equal '', filtered_records[0]['error']
-  end
-
-
-  def test_poweron_filter
-    records = [
-        {
-            "SNMPv2-MIB::sysUpTime.0"=>"43 days, 21:28:56.10",
-            "SNMPv2-MIB::snmpTrapOID.0"=>"SNMPv2-SMI::enterprises.59.3.800.100.20.3",
-            "SNMPv2-SMI::enterprises.59.3.800.10.10.1.1"=>"UV300-00000550",
-            "SNMPv2-SMI::enterprises.59.3.800.10.30.1.1"=>"r001i01b",
-            "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"=>"SYSPOWERSTATE",
-            "SNMPv2-SMI::enterprises.59.3.800.30.10.1.2"=>"0x0",
-            "SNMPv2-SMI::enterprises.59.3.800.30.10.1.4"=>"19",
-            "host"=>"192.168.254.61"
-        }
-    ]
-
-    filtered_records = filter(records)
-    assert_equal records[0]['message'], filtered_records[0]['message']
-    assert_equal 'HPE:testcolo:UV300-00000550', filtered_records[0]['machineId']
-    assert_equal 'SYSPOWERSTATE', filtered_records[0]['device']
-    assert_equal 'Server Power OFF', filtered_records[0]['event']
-    assert_equal 'off', filtered_records[0]['status']
-    assert_equal 'info', filtered_records[0]['severity']
-    assert_equal '', filtered_records[0]['error']
-  end
-
-  def test_temp_filter
-      records = [
-          {
-              "SNMPv2-MIB::sysUpTime.0"=>"177 days, 22:47:08.51",
-              "SNMPv2-MIB::snmpTrapOID.0"=>"SNMPv2-SMI::enterprises.59.3.800.100.20.3",
-              "SNMPv2-SMI::enterprises.59.3.800.10.10.1.1"=>"UV300-00000547",
-              "SNMPv2-SMI::enterprises.59.3.800.10.30.1.1"=>"r001i24b",
-              "SNMPv2-SMI::enterprises.59.3.800.30.10.1.1"=>"PSU2_ENV_TEMP2",
-              "SNMPv2-SMI::enterprises.59.3.800.30.10.1.2"=>"NA",
-              "SNMPv2-SMI::enterprises.59.3.800.30.10.1.4"=>"0",
-              "host"=>"172.17.0.2"
-          }
-      ]
-    filtered_records = filter(records)
-    assert_equal records[0]['message'], filtered_records[0]['message']
-    assert_equal 'HPE:testcolo:UV300-00000547', filtered_records[0]['machineId']
-    assert_equal 'PSU2_ENV_TEMP2', filtered_records[0]['device']
-    assert_equal 'Chassis Sensor Event', filtered_records[0]['event']
-    assert_equal 'unavailable', filtered_records[0]['status']
-    assert_equal 'NA', filtered_records[0]['sensorValue']
-    assert_equal 'info', filtered_records[0]['severity']
-    assert_equal '', filtered_records[0]['error']
+    assert_equal(records[0].length, filtered_records[0].length, "Incorrect record size")
+    assert_equal(records[0]["host"], filtered_records[0]["host"], "Non MIB value was modified")
+    # Values should remain unmodified.
+    records.each { |recKey, recValue|
+        fixedKey = recKey.to_s.gsub("-","_").gsub(".","_").gsub("::","_")
+        assert_equal(records[0][recKey], filtered_records[0][fixedKey], "Value has been modified")
+    }
   end
 
 end
