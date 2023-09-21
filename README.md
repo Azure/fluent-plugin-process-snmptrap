@@ -28,28 +28,6 @@ Events detected:
 Power ON
 Power OFF
 
-## Installation
-
-### RubyGems
-
-```
-$ gem install fluent-plugin-process-snmptrap
-```
-
-### Bundler
-
-Add following line to your Gemfile:
-
-```ruby
-gem "fluent-plugin-process-snmptrap"
-```
-
-And then execute:
-
-```
-$ bundle
-```
-
 ## Configuration
 
 You can generate configuration template:
